@@ -122,13 +122,60 @@ echo '/Td6WFoAAATm1rRGAgAhARYAAAB0L+Wj4Av/AtldAGOcPC/kRxBdYCwEY+vd4Ll8OFi7V3Tqb3
 
 </details>
 
+## 存储结构
+
+数据的实际内容存储在对应的数据文件中，由 `Store` 类管理。每个数据条目（如一个帐户、一本图书、一条交易记录）都有一个自然数 id，也存储在数据文件中。（换句话说，数据文件中存放的是一个自然数 id 和对应的所有数据。）以帐户为例，数据文件可能会长这样：（不一定要按照这个格式实现）
+
+```plain
+# accounts
+0300 0000 # (int) 3, 代表数据条目个数
+
+# 第一条记录
+0000 0000 # (int) 0, 自然数 id
+726f 6f74 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 00 # (char[31]) root，用户 ID
+736a 7475 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 00 # (char[31]) sjtu，密码
+0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 00 # (char[31]) (空字符串)，用户 name
+00 0000 # 意义不明的 padding，由 C++ class 的内部存储结构引入，下同
+0700 0000 # (Privilege) 7，代表店主身份
+
+# 第二条记录
+0100 0000 # (int) 1, 自然数 id
+776f 726b 6572 6964 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 00 # (char[31]) workerid，用户 ID
+7061 7373 776f 7264 5f77 6f72 6b65 7200 0000 0000 0000 0000 0000 0000 0000 00 # (char[31]) password_worker，密码
+776f 726b 6572 6e61 6d65 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 00 # (char[31]) workername，用户 name
+00 0000 # 意义不明的 padding
+0300 0000 # (Privilege) 3，代表员工身份
+
+# 第三条记录
+ffff ffff # (int) -1，代表此条数据被删除，此块可被回收再利用
+776f 726b 6572 3200 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 00 # (char[31]) worker2，用户 ID
+7061 7373 776f 7264 5f77 6f72 6b65 7232 0000 0000 0000 0000 0000 0000 0000 00 # (char[31]) password_worker2，密码
+776f 726b 6572 6e61 6d65 3200 0000 0000 0000 0000 0000 0000 0000 0000 0000 00 # (char[31]) workername2，用户 name
+00 0000 # 意义不明的 padding
+0300 0000 # (Privilege) 3，代表员工身份
+```
+
+为了实现 `show` 等命令的快速查找，我们需要对数据建立索引，记录在索引文件里。索引文件由块状链表或 B+ 树存储在 `.ix` 文件里。块链或 B+ 树的 key 为需要被索引的字段（如 `Account::name` 或 `Book::isbn`），值为对应记录的自然数 id。例如要对上面两条记录建立关于 `userId` 的索引，则应有：
+
+```cpp
+// accounts.user-id.ix
+index["root"] -> 0
+index["workerid"] -> 1
+/* 不应该有:
+ * index["worker2"] -> -1
+ * 或者
+ * index["worker2"] -> 2 */
+```
+
 ## 代码结构
 
 ### 工具库
 
-### 字符串存储 `varchar.{cpp,h}`
+#### 字符串存储 `varchar.{cpp,h}`
 
 实现一个 `char [n]` 的包装。当输入的 `std::string`, `const char *` 或者 `Varchar<A>` 长度超过 `maxLength` 时抛出异常。
+
+这个类存在的意义在于，如果用 `char []` 存数据，则无法方便地实现等号赋值和比较，需要特判；如果用 `std::string` 则无法方便地直接存储到文件中（因为 `std::string` 的实际内存在堆空间中），也需要特判。而使用 `Varchar<>` 存数据，则既可以 `user->name = "root";` 也可以直接 `write(static_cast<char *>(&data), sizeof(data));`。
 
 ```cpp
 template <int maxLength>
@@ -158,7 +205,7 @@ struct Varchar {
 
 #### 分块存储 `store.{cpp,h}`
 
-实现一个类似于 Memory River 的分块存储结构，需要支持一个数值索引 `id`，并保证在没有 `remove` 操作的情况下 `id` 非负且随时间递增。
+实现一个类似于 Memory River 的分块存储结构，需要支持一个数值索引 `id`，并保证在没有 `remove` 操作的情况下 `id` 非负且随时间递增。用于存储实际数据。
 
 ```cpp
 template <typename PayloadType>
@@ -192,7 +239,7 @@ class UnrolledLinkedList {
 };
 ```
 
-其中 `KeyType` 可比较。
+其中 `KeyType` 可比较。用于存储索引。
 
 #### 模型 `model.{cpp,h}`
 
@@ -255,12 +302,12 @@ template <typename M>
 class Model {
  public:
   int id;
-  // check() 后将从未保存过的 Model 插入 M::manager_.store_, 若已经保存过则 throw, 并把 id 赋值为 Store 返回的 id
+  // check() 后将从未保存过的 Model 插入 M::manager_.store_ 并创建索引, 若已经保存过则 throw, 并把 id 赋值为 Store 返回的 id
   // Implementation notes: 可以用 id == -1 来表明没有保存过
   void save ();
-  // check() 后更新一个已经保存过的 Model, 若从未保存则 throw
+  // check() 后更新一个已经保存过的 Model 并更新索引, 若从未保存则 throw
   void update () const;
-  // 删除一个已经保存过的 Model, 若从未保存则 throw
+  // 删除一个已经保存过的 Model 和它的索引, 并将 id 重置, 若从未保存则 throw
   void remove ();
   // 默认行为为比较 id, 派生类可重载成 ISBN 等的比较
   friend bool operator< (const Model &lhs, const Model &rhs);
@@ -282,13 +329,15 @@ class Model {
   static std::set<M> findAll (int limit);
 
  protected:
+  // 初始化信息（本项目中只在 Account 中用到）
+  static void init_ () {}
   // 临时对象, 用来传入索引信息
   struct Index {
     /*
-    key 在 Model 上的 offset
-    Implementation notes:
-    #define MODEL_OFFSETOF(x) ((int)(&(((M *)0)->*x)))
-    Index (...) : offset(MODEL_OFFSETOF(*key)), filename(filename) {}
+      key 在 Model 上的 offset
+      Implementation notes:
+      #define MODEL_OFFSETOF(x) ((int)(&(((M *)0)->*x)))
+      Index (...) : offset(MODEL_OFFSETOF(*key)), filename(filename) {}
     */
     int offset;
     // 存索引的文件名
@@ -304,6 +353,7 @@ class Model {
     Store<M> store_;
    public:
     Manager () = delete;
+    // 在这里读入或初始化数据文件，若数据文件不存在则需要调用 M::init_()
     Manager (const char *filename, std::initializer_list<Index> indices);
     // 获取指定 key 的索引, 不存在索引则 throw
     template <typename ValueType>
@@ -317,6 +367,44 @@ class Model {
 [orm]: http://en.wikipedia.org/wiki/Object%E2%80%93relational_mapping
 [memptr-eg]: https://paste.sr.ht/~alan-liang/85ff4acd6b442bf30ad79ad91f03e9fadaa918b8
 [optional-cppref]: https://en.cppreference.com/w/cpp/utility/optional
+
+##### 为什么要搞这么个东西？~~不是没事找事吗~~
+
+对比一下两段代码:
+
+```cpp
+// https://github.com/PaperL/BookStore_SiriusNEO/blob/16447e454d68ddefb34a91a26379e3287256b2d2/usermanager.cpp#L281-L297 ，有简化
+vector<int> tempVec;
+id_cmd.findNode(id, tempVec);//查找是否有该用户
+if (tempVec.empty()) {//没有该账户
+  printf("Invalid\n");
+  return;
+}
+int offset;
+User tempUser;
+string temps;
+
+offset = tempVec[0];
+tempUser = freadUser(offset);
+temps=tempUser.passwd;
+```
+
+和
+
+```cpp
+auto tempUser = Account::findOne(&Account::userId, id);
+if (!tempUser) {//没有该账户
+  printf("Invalid\n");
+  return;
+}
+std::string temps = tempUser->password;
+```
+
+显然后者能更简洁清晰地表现出这段代码的意图，并且减少了大量重复代码（`offset`, `tempVec`, `freadUser` 等）。这样的机制还有一些其他好处：
+
+- 文件的具体存储结构和业务逻辑里的表示分离。想给所有数据加密？只需要改 `Model` 类就可以了。
+- 容易增加新的存储结构。想加个文件存失败的登录请求？直接 `class FailedLogInAttempt : public Model<FailedLogInAttempt> {...};` 就行。
+- ~~与实际工程接轨~~
 
 ### 业务逻辑相关
 
@@ -334,6 +422,9 @@ class Account : public Model<Account> {
   Varchar<30> name;
   Privilege privilege;
   void check ();
+ protected:
+  // 初始化 root 帐户
+  static void init_ ();
  private:
   static Manager manager_;
   friend class Model<Account>;
@@ -362,6 +453,7 @@ class Book : public Model<Book> {
   // 按题目要求输出图书信息
   void printf () const;
   void setKeywords (const std::vector<std::string> &keywords);
+  // implementation notes: Keyword::findMany(&Keyword::bookId, id);
   std::set<std::string> getKeywords () const;
   // 找出所有含有这个关键词的 Book
   static std::set<Book> findByKeyword (const std::string &keyword);
@@ -462,7 +554,7 @@ class Shell {
   int selectedBookId = -1;
   // 登录状态
   static std::vector<Shell> stack;
-  // 返回 stack 顶的 shell
+  // 返回 stack 顶的 shell, 即 Shell::stack.back()
   static Shell &current ();
   // 在当前 account 权限等级严格小于 level 时 throw
   static void requestPrivilege (Account::Privilege level);
@@ -521,7 +613,7 @@ int main (void);
 
 | Authors    | Version |
 |:-----------|:--------|
-| Alan-Liang | 1       |
+| Alan-Liang | 2       |
 
 ### 如何修改本文档
 
