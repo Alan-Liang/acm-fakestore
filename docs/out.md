@@ -210,8 +210,6 @@ struct Varchar {
 ```cpp
 template <typename PayloadType>
 class Store {
- private:
-  int nextId_; // 下一个产生的 id
  public:
   Store (const char *filename); // 初始化文件存储
   PayloadType select (int id); // 查找一条记录
@@ -561,6 +559,7 @@ class Shell {
 };
 std::vector<Shell> Shell::stack = { {} };
 
+// 这些函数当处理到错误输入时会 throw
 void quit (void);
 void exit (void);
 
@@ -589,7 +588,7 @@ void log (void);
 
 #### 入口点 `main.cpp`
 
-按行读入并解析指令。
+按行读入并解析、执行指令，当捕获异常时输出 `Invalid` 并解析下一条指令。
 
 ```cpp
 int main (void);
@@ -611,9 +610,9 @@ int main (void);
 
 ## Metadata
 
-| Authors    | Version |
-|:-----------|:--------|
-| Alan-Liang | 2       |
+| Authors            | Version |
+|:-------------------|:--------|
+| Alan-Liang, Jerx2y | 3       |
 
 ### 如何修改本文档
 
