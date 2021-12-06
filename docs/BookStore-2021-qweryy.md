@@ -181,6 +181,8 @@ class BookManager {
 
 #### 3. 日志管理类
 
+目前想法是在文件中顺序存储。
+
 ### 文件结构
 
 #### 1. 数据文件
@@ -194,3 +196,11 @@ class BookManager {
 7. log.dat
 
 #### 2. 索引文件
+
+#### 3. 代码文件
+
+1. main.cpp 主入口，解析命令与调用相应的类
+2. blocklist.h/cpp 数据结构的头文件和实现文件
+3. users.h/cpp 实现用户类与用户管理类。
+4. books.h/cpp 实现书类和管理类
+5. logs.h/cpp 日志管理类
