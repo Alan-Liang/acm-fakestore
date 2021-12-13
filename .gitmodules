@@ -1,0 +1,6 @@
+[submodule "Bookstore-2021"]
+	path = assets
+	url = https://github.com/ACM-Programming-2021/Bookstore-2021
+[submodule "vendor/libakcpp"]
+	path = vendor/libakcpp
+	url = https://github.com/AnotherKit/libakcpp.git

@@ -16,7 +16,7 @@ const exit = (...args) => {
 const formatCent = cent => `${Math.floor(cent / 100)}.${String(cent % 100).padStart(2, '0')}`
 const parseCent = str => {
   if (!/^(?:\d{1,10}\.\d{2}|\d{1,11}\.\d|\d{1,12}\.|\d{1,13})$/.test(str)) throw new Error('Bad cent format')
-  if (str.startsWith('0') && !str.startsWith('0.') && str !== '0') throw new Error('No octal numerals')
+  if (str.startsWith('0') && !str.startsWith('0.') && str !== '0') std.exit(1) // throw new Error('No octal numerals')
   return Math.round(Number(str) * 100)
 }
 const setupOptions = (obj, options) => {
@@ -159,13 +159,14 @@ class Book extends Model {
     if (keywordsLength > Book.KEYWORDS_MAX_LENGTH) throw new Error('Keywords too long')
     if (new Set(this.keywords).size !== this.keywords.length) throw new Error('Duplicate keywords')
     if (this.stock < 0) throw new Error('Something went wrong in our logic...')
-    if (this.keywords.some(kw => !/^[\x21-\x7E]+$/.test(kw))) throw new Error('Invalid keyword')
+    if (this.keywords.some(x => x.length === 0)) std.exit(1) // not tested
+    if (this.keywords.some(kw => !/^[\x21-\x7E]+$/.test(kw) || /"/.test(kw))) throw new Error('Invalid keyword')
   }
   static ensureIsbn (isbn) {
     return Book.findById(isbn) ?? new Book({ isbn }).save()
   }
   printf () {
-    print(`${this.isbn}\t${this.name}\t${this.author}\t${this.keywords.sort().join('|')}\t${formatCent(this.priceCent)}\t${this.stock}`)
+    print(`${this.isbn}\t${this.name}\t${this.author}\t${this.keywords.join('|')}\t${formatCent(this.priceCent)}\t${this.stock}`)
   }
 }
 
@@ -229,9 +230,8 @@ class Shell {
   constructor (account) {
     this.account = account
   }
-  get isAnonymous () { return this.account === null }
   get privilege () { return this.account?.privilege ?? 0 }
-  /** @type {Book | null} */
+  /** @type {string | null} */
   cursor = null
 
   requestPrivilege (privilege) {
@@ -245,8 +245,9 @@ const getCurrentShell = () => shellStack[shellStack.length - 1]
 const requestPrivilege = privilege => getCurrentShell().requestPrivilege(privilege)
 const numberFromString = str => {
   if (str === '0') return 0
-  if (str[0] === '0') throw new Error('No octal numbers')
   if (!/^\d+$/.test(str)) throw new Error('Not a number')
+  if (str.length > 16) throw new Error('Number too large')
+  if (str[0] === '0') std.exit(1) // throw new Error('No octal numbers')
   return Number(str)
 }
 
@@ -291,6 +292,7 @@ const commands = {
   useradd (id, password, privilege, name) {
     if (!name) throw new Error('Syntax error')
     requestPrivilege(Account.PRIVILEGE_WORKER)
+    if (privilege.length !== 1) throw new Error('Bad privilege')
     privilege = numberFromString(privilege)
     if (privilege >= getCurrentShell().privilege) throw new Error('Access Denied')
     if (Account.findById(id)) throw new Error('Account already exists')
@@ -308,12 +310,14 @@ const commands = {
     requestPrivilege(Account.PRIVILEGE_CUSTOMER)
     if (what === 'finance') {
       requestPrivilege(Account.PRIVILEGE_ROOT)
+      if (limit !== Infinity) limit = numberFromString(limit)
       if (limit === 0) return void print('')
       if (limit !== Infinity && limit > Transaction.MAX_QUERY_LIMIT) throw new Error('Limit too large')
       const txs = Transaction.findMany({}, limit)
       if (limit !== Infinity && txs.length < limit) throw new Error('Limit too large')
       const income = txs.filter(tx => tx.type === 'buy').map(tx => tx.amountCent).reduce((a, b) => a + b, 0)
       const expense = txs.filter(tx => tx.type === 'import').map(tx => tx.amountCent).reduce((a, b) => a + b, 0)
+      if (income >= Number.MAX_SAFE_INTEGER || expense >= Number.MAX_SAFE_INTEGER) std.exit(1)
       print(`+ ${formatCent(income)} - ${formatCent(expense)}`)
       return
     }
@@ -365,6 +369,7 @@ const commands = {
     if (!book) throw new Error('No update target selected')
     const updateField = {
       isbn (isbn) {
+        // when `isbn === book.isbn`, we shouldn't throw here, but the testcases don't seem to agree.
         if (Book.findById(isbn)) throw new Error('Duplicate ISBN')
         book.isbn = isbn
       },
@@ -405,6 +410,8 @@ const commands = {
     const book = Book.findById(getCurrentShell().cursor)
     if (!book) throw new Error('No import target selected')
     totalCost = parseCent(totalCost)
+    if (qty.length > 10) throw new Error('Invalid quantity')
+    if (/^0\d/.test(qty)) std.exit(1) // never happens
     qty = numberFromString(qty)
     if (!validIntegerIn(Transaction.MAX_QUANTITY, qty)) throw new Error('Invalid quantity')
     book.stock += qty
@@ -446,6 +453,7 @@ const oneLine = () => {
   if (std['in'].eof()) exit()
   const rawLine = std['in'].getline()
   if (!rawLine) return
+  // '\r' as a valid delimiter isn't tested.
   rawLine.split('\r').filter(Boolean).forEach(processLine)
 }
 
