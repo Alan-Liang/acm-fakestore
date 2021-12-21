@@ -1,6 +1,6 @@
 # BookStore 2021 by qweryy
 
-> Written by 范棋珈
+> Written by 范棋珈, modified by panic
 
 ### 工具
 
@@ -12,49 +12,17 @@
 
 用来存储用户和书本。由于对日志的索引要求较低，可以直接顺序存储。
 
-> 注：若需要实现 B+ Tree 可以根据实际情况自行修改。
-
-#### 1.  块类
-
-每个块内存一个数组，模板为数组元素类和块大小。
-
-按照 `NodeType` 重载的小于号升序排序。 
-
 ```c++
-template <class NodeType, size_t SIZ>
-class Block {
- private:
-  std::string file_name;
-  Block *nxt, *lst;
-  NodeType array[SIZ];
-
+template <BptStorable KeyType, BptStorable ValueType, size_t szChunk>
+class BpTree {
  public:
-  void add(const NodeType &obj);
-  void del(const NodeType &obj);
-  Block &Merge(Block &obj);
-  void split();
-};
-```
-
-#### 2. 块状链表类
-
-本质是一个链表，把所有块链起来。
-
-按照 `NodeType` 重载的小于号升序排序。 
-
-```c++
-template <class NodeType, size_t SIZ>
-class BlockList {
- protected:
-  std::string file_name;
-  Block<NodeType, SIZ> *head = nullptr, *tail = nullptr;
-
- public:
-  BlockList() = default;
-  BlockList(const std::string &file_name);
-  // 根据索引文件读入每个 Block.
-  void add(const NodeType &obj);
-  void del(const NodeType &obj);
+  BpTree () = delete;
+  BpTree (const char *filename);
+  void add (const KeyType &key, const ValueType &value);
+  void del (const KeyType &key, const ValueType &value);
+  // 检查树中是否有 (key, value)
+  bool find (const KeyType &key, const ValueType &value);
+  void query (const KeyType &key, std::vector<ValueType> &store);
 };
 ```
 
@@ -69,15 +37,21 @@ enum Privilege { kGuest = 0, kCustomer = 1, kWorker = 3, kRoot = 7 };
 
 class User {
  private:
-  std::string id, name, password;
-  Privilege privilege;
+  // 不能用 std::string，因为 string 的实际内容是在堆内存里的
+  ak::file::Varchar<30> id_, name_, password_;
+  Privilege privilege_;
 
+ public:
   // TODO : 构造函数
 
-  bool operator<(const User &rhs) const {  // 根据 id 排序
+  const std::string &id () { return id_; }
+  const std::string &name () { return name_; }
+  const std::string &password () { return password_; }
+
+  bool operator< (const User &rhs) const {  // 根据 id 排序
     return id < rhs.id;
   }
-  void Passwd(const std::string &new_password);  // 修改密码
+  void passwd (const std::string &newPassword);  // 修改密码
 };
 ```
 
@@ -90,14 +64,16 @@ class User {
 ```c++
 class Book {
  public:
-  std::string isbn, name, author, keyword;
-  int quantity, price;
+  ak::file::Varchar<20> isbn;
+  ak::file::Varchar<60> name, author, keyword;
+  long long quantity;
+  long long price;
 
   Book() = default;
-  bool operator<(const Book &rhs) const {
+  bool operator< (const Book &rhs) const {
     return isbn < rhs.isbn;
   }
-  // 修改与进货等直接访问成员变量。 
+  // 修改与进货等直接访问成员变量。
   // TODO : 一些操作函数。
 };
 ```
@@ -144,16 +120,21 @@ class Name_Book : public Book;
 ```c++
 class UserManager {
  private:
-  BlockList<User, 400> users;  // 数字可修改。
-  User current_user;
-  std::string user_stack_file;
+  // key 为 user id
+  BpTree<ak::file::Varchar<30>, User> users;
+  // pair 的 second 为选中的 book id, 初始为 -1
+  std::vector<std::pair<User, int>> userStack_;
+  User &currentUser_ ();
 
  public:
-  void LogIn(const std::string &id, const std::string &password = "");
-  void LogOut();
-  void Register(const std::string &id, const std::string &password, const std::string &name);
-  void UserAdd(const std::string &id, const std::string &password, Privilege p, const std::string &name);
-  void Delete(const std::string &id);
+  UserManager () = delete;
+  // 这里应该初始化 userStack_ 为只有一个匿名帐号
+  UserManager (const char *filename);
+  void logIn (const std::string &id, const std::string &password = "");
+  void logOut ();
+  void signUp (const std::string &id, const std::string &password, const std::string &name);
+  void userAdd (const std::string &id, const std::string &password, Privilege p, const std::string &name);
+  void remove (const std::string &id);
 };
 ```
 
@@ -163,7 +144,7 @@ class UserManager {
 
 ```c++
 class BookManager {
-  enum ShowType { kISBN, kKeyword, kAuthor, kName };
+  enum ShowType { kIsbn, kKeyword, kAuthor, kName };
  private:
   BlockList<Book, 400> books;
   BlockList<Keyword_Book, 400> keyword_books;
@@ -171,10 +152,9 @@ class BookManager {
   BlockList<Name_Book, 400> name_books;
 
  public:
-  Book current_book;
-  void Show(ShowType type, const std::string &s);
-  void Buy(const std::string &isbn, const int &cnt);
-  void Select(const std::string &isbn);
+  void show (ShowType type, const std::string &s);
+  void buy (const std::string &isbn, const int &cnt);
+  void select (const std::string &isbn);
   // 对于某本书的操作在 Book 类的成员函数内。
 };
 ```
