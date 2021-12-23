@@ -112,10 +112,9 @@ class CmdRecord {
  private:
   ak::file::Varchar<30> user_id;  // 执行者
   ak::file::Varchar<1024> command;  // 原始命令
-  int number;  // 表示命令编号。
 
  public:
-  CmdRecord(const std::string &, const std::string &);
+  CmdRecord(const std::string &, const std::string &);  // 构造函数。
   friend std::ostream &operator<<(std::ostream &, const CmdRecord &);  // 输出重载。
 };
 ```
