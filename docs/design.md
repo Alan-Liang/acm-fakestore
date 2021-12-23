@@ -47,6 +47,7 @@ class User {
   std::string id () { return id_; }
   std::string name () { return name_; }
   std::string password () { return password_; }
+  Privilege privilege () { return privilege_; }
 
   bool operator< (const User &rhs) const {  // 根据 id 排序
     return id_ < rhs.id_;
@@ -68,20 +69,6 @@ class Book {
   ak::file::Varchar<60> name, author, keyword;
   long long quantity;
   long long price;
-
-  class Node {
-   private:
-    int offset_;
-    ak::file::Varchar<20> isbn_;
-   public:
-    Node () = default;
-    std::string isbn ();
-    const int &offset ();
-    explicit Node (const std::string &isbn, const int &offset);
-    bool operator< (const Node &rhs) const;
-    bool operator== (const Node &rhs) const;
-    bool operator!= (const Node &rhs) const;
-  };
 
   Book() = default;
   bool operator< (const Book &rhs) const {
@@ -117,6 +104,7 @@ class UserManager {
   void logOut ();
   void signUp (const std::string &id, const std::string &password, const std::string &name);
   void userAdd (const std::string &id, const std::string &password, Privilege p, const std::string &name);
+  void passwd (const std::string &id, const std::string &current, const std::string &newPassword);
   void remove (const std::string &id);
 };
 ```
@@ -127,19 +115,25 @@ class UserManager {
 
 ```c++
 class BookManager {
-  enum ShowType { kIsbn, kKeyword, kAuthor, kName };
+  enum Field { kIsbn, kKeyword, kAuthor, kName, kPrice };
  private:
-  BpTree<int, Book> books_;
-  BpTree<ak::file::Varchar<60>, Book::Node> keywordBooks_;
-  BpTree<ak::file::Varchar<60>, Book::Node> authorBooks_;
-  BpTree<ak::file::Varchar<60>, Book::Node> nameBooks_;
+  BpTree<ak::file::Varchar<20>, Book> books_;
+  BpTree<ak::file::Varchar<60>, ak::file::Varchar<20>> nameBooks_;
+  BpTree<ak::file::Varchar<60>, ak::file::Varchar<20>> keywordBooks_;
+  BpTree<ak::file::Varchar<60>, ak::file::Varchar<20>> authorBooks_;
 
  public:
   BookManager () = delete;
   BookManager (const char *bookfile, const char *keywordfile, const char *authorfile, const char *namefile);
-  void show (ShowType type, const std::string &s);
-  void buy (const std::string &isbn, const int &cnt);
+  void show (Field field, const std::string &value);
+  void show ();
+  void buy (const std::string &isbn, const long long &cnt);
   void select (const std::string &isbn);
+  struct UpdateClause {
+    Field field;
+    std::string payload;
+  };
+  void modify (const std::vector<UpdateClause> &updates);
   // 对于某本书的操作在 Book 类的成员函数内。
 };
 ```
