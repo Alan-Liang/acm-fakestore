@@ -81,6 +81,47 @@ class Book {
 
 #### 3. 日志
 
+日志有两种，一种是交易记录，一种是命令记录。
+
+##### (1) 交易记录
+
+记录每笔交易的收入、支出（单笔交易至少有一个量为 0）、交易用户 id（如果需要），支持加法、输出。
+
+```c++
+class TradeRecord {
+ private:
+  // ak::file::Varchar<30> id_
+  double income, expense;
+
+ public:
+  // 构造函数，type = 0 为收入，= 1 为支出。
+  TradeRecord(const bool &type, const double &);
+  // 支持多笔交易记录相加。
+  TradeRecord &operator+=(const TradeRecord &);
+  // 按照题目要求格式输出。
+  friend std::ostream &operator<<(std::ostream &, const TradeRecord &);
+};
+```
+
+##### (2) 命令记录
+
+记录每个指令的执行者与内容。
+
+```c++
+class CmdRecord {
+ private:
+  ak::file::Varchar<30> user_id;  // 执行者
+  ak::file::Varchar<1024> command;  // 原始命令
+  int number;  // 表示命令编号。
+
+ public:
+  CmdRecord(const std::string &, const std::string &);
+  friend std::ostream &operator<<(std::ostream &, const CmdRecord &);  // 输出重载。
+};
+```
+
+
+
 ### 节点管理模块
 
 #### 1. 用户管理类
@@ -140,7 +181,41 @@ class BookManager {
 
 #### 3. 日志管理类
 
-目前想法是在文件中顺序存储。
+在这个类中实现存储两种记录。直接在文件中按顺序存储（或用 B+ Tree 代为存储）。
+
+```c++
+class LogManager {
+ private:
+  std::string trade_file_name;
+  std::string cmd_file_name;
+  // 也可以使用 B+ Tree 代为存储。
+  // int sizeof_trade, sizeof_cmd;
+
+  // 私有成员函数，读取文件开头存的记录数量。
+  const int TradeCount();
+  const int CmdCount();
+
+ public:
+  void Init(const std::string &name);
+  // 初始化，文件名为 name + "_trade.bin"/"_cmd.bin".
+  // 注意，每个文件开头预留一个 int 存储交易记录/命令记录的数量。
+  void AddTrade(const TradeRecord &);
+  // 在文件末尾加入一个交易记录，并修改交易记录数量。
+  void ShowFinance(const int &cnt);
+  // 对应题目命令，计算后 cnt 条交易记录并输出。
+  void ReportFinance();
+  // 输出所有交易记录。
+  void AddLog(const CmdRecord &);
+  // 在文件末尾加入一个命令记录，并修改命令记录数量。
+  void ReportEmployee(const std::string &id_ = "");
+  // 对应题目命令 report myself，从头到尾查找并输出某个员工的命令记录。
+  // 对于命令 report employee，使用上述默认参数可以匹配所有 id 的记录。
+  void ReportLog();
+  // 可以自由决定实现方式，或者可以分别调用 ReportFinance() 和 ReportEmployee().
+};
+```
+
+
 
 ### 文件结构
 
