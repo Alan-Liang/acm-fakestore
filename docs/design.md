@@ -44,12 +44,12 @@ class User {
  public:
   // TODO : 构造函数
 
-  const std::string &id () { return id_; }
-  const std::string &name () { return name_; }
-  const std::string &password () { return password_; }
+  std::string id () { return id_; }
+  std::string name () { return name_; }
+  std::string password () { return password_; }
 
   bool operator< (const User &rhs) const {  // 根据 id 排序
-    return id < rhs.id;
+    return id_ < rhs.id_;
   }
   void passwd (const std::string &newPassword);  // 修改密码
 };
@@ -69,6 +69,20 @@ class Book {
   long long quantity;
   long long price;
 
+  class Node {
+   private:
+    int offset_;
+    ak::file::Varchar<20> isbn_;
+   public:
+    Node () = default;
+    std::string isbn ();
+    const int &offset ();
+    explicit Node (const std::string &isbn, const int &offset);
+    bool operator< (const Node &rhs) const;
+    bool operator== (const Node &rhs) const;
+    bool operator!= (const Node &rhs) const;
+  };
+
   Book() = default;
   bool operator< (const Book &rhs) const {
     return isbn < rhs.isbn;
@@ -77,37 +91,6 @@ class Book {
   // TODO : 一些操作函数。
 };
 ```
-
-##### 2.1 派生：索引为关键词的书类
-
-以二元组 (keyword, isbn) 为排序关键字。
-
-按照 Keyword 索引时注意要把原来的书按关键词拆分（注意到 `show` 指令只需要查某一个关键词对应的图书）。
-
-```c++
-class Keyword_Book : public Book {
- public:
-  Keyword_Book(const Book &obj) : Book(obj) {}
-  bool operator<(const Keyword_Book &rhs) const {
-    if (keyword == rhs.keyword) return isbn < rhs.isbn;
-		return keyword < rhs.keyword;
-  }
-};
-```
-
-##### 2.2 派生：索引为作者的书类
-
-```c++
-class Author_Book : public Book;
-```
-
-##### 2.3 派生：索引为书名的书类
-
-```c++
-class Name_Book : public Book;
-```
-
-这两个派生类实现与 **2.1** 类似。
 
 #### 3. 日志
 
@@ -121,7 +104,7 @@ class Name_Book : public Book;
 class UserManager {
  private:
   // key 为 user id
-  BpTree<ak::file::Varchar<30>, User> users;
+  BpTree<ak::file::Varchar<30>, User> users_;
   // pair 的 second 为选中的 book id, 初始为 -1
   std::vector<std::pair<User, int>> userStack_;
   User &currentUser_ ();
@@ -146,12 +129,14 @@ class UserManager {
 class BookManager {
   enum ShowType { kIsbn, kKeyword, kAuthor, kName };
  private:
-  BlockList<Book, 400> books;
-  BlockList<Keyword_Book, 400> keyword_books;
-  BlockList<Author_Book, 400> author_books;
-  BlockList<Name_Book, 400> name_books;
+  BpTree<int, Book> books_;
+  BpTree<ak::file::Varchar<60>, Book::Node> keywordBooks_;
+  BpTree<ak::file::Varchar<60>, Book::Node> authorBooks_;
+  BpTree<ak::file::Varchar<60>, Book::Node> nameBooks_;
 
  public:
+  BookManager () = delete;
+  BookManager (const char *bookfile, const char *keywordfile, const char *authorfile, const char *namefile);
   void show (ShowType type, const std::string &s);
   void buy (const std::string &isbn, const int &cnt);
   void select (const std::string &isbn);
@@ -168,19 +153,18 @@ class BookManager {
 #### 1. 数据文件
 
 1. books.dat
-2. keyword_books.dat
-3. author_books.dat
-4. name_books.dat
-5. users.dat
-6. user_stack.dat
-7. log.dat
+1. keyword_books.dat
+1. author_books.dat
+1. name_books.dat
+1. users.dat
+1. log.dat
 
 #### 2. 索引文件
 
 #### 3. 代码文件
 
 1. main.cpp 主入口，解析命令与调用相应的类
-2. blocklist.h/cpp 数据结构的头文件和实现文件
+2. bptree.h 数据结构的头文件和实现文件
 3. users.h/cpp 实现用户类与用户管理类。
 4. books.h/cpp 实现书类和管理类
 5. logs.h/cpp 日志管理类
