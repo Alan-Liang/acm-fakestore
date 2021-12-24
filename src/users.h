@@ -6,6 +6,7 @@
 #include <optional>
 
 #include "bptree.h"
+#include "books.h"
 
 enum Privilege { kGuest = 0, kCustomer = 1, kWorker = 3, kRoot = 7 };
 
@@ -17,6 +18,7 @@ class User {
   void requestPrivilege_ (Privilege required);
   friend class UserManager;
  public:
+  User () = default;
   User (const std::string id, const std::string &name, const std::string password, Privilege privilege);
 
   std::string id ();
@@ -37,9 +39,7 @@ class UserManager {
  private:
   // key 为 user id
   BpTree<ak::file::Varchar<30>, User> users_;
-  // pair 的 second 为选中的 book id, 初始为 -1
-  std::vector<std::pair<User, int>> userStack_;
-  User &currentUser_ ();
+  std::vector<std::pair<User, std::string>> userStack_;
 
   std::optional<User> userFromId_ (const std::string &id);
   static constexpr const char *kAnonymous = "<anonymous>";
@@ -50,14 +50,19 @@ class UserManager {
   UserManager () = delete;
   // 这里应该初始化 userStack_ 为只有一个匿名帐号
   UserManager (const char *filename);
+  User &currentUser ();
   void logIn (const std::string &id, const std::string &password = "");
   void logOut ();
   void signUp (const std::string &id, const std::string &password, const std::string &name);
   void userAdd (const std::string &id, const std::string &password, Privilege p, const std::string &name);
-  void passwd (const std::string &id, const std::string &current, const std::string &newPassword);
+  void passwd (const std::string &id, const std::string &current, const std::string &newPassword = "");
   void remove (const std::string &id);
 
   void requestPrivilege (Privilege privilege);
+  void clearCache ();
+
+  std::string &selection ();
+  void updateSeletions (const std::string &old, const std::string &current);
 };
 
 #endif

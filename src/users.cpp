@@ -36,10 +36,10 @@ using ak::validator::expect;
 } // namespace
 
 void User::validateId (const std::string &id) {
-  expect(id).toMatch(R"([0-9a-zA_Z_]+)").butNot().toBeLongerThan(30);
+  expect(id).toMatch(R"([0-9a-zA-Z_]+)").butNot().toBeLongerThan(30);
 }
 void User::validatePassword (const std::string &password) {
-  expect(password).toMatch(R"([0-9a-zA_Z_]+)").butNot().toBeLongerThan(30);
+  expect(password).toMatch(R"([0-9a-zA-Z_]+)").butNot().toBeLongerThan(30);
 }
 void User::validateName (const std::string &name) {
   expect(name).toMatch(R"([\x21-\x7E]+)").butNot().toBeLongerThan(30);
@@ -48,7 +48,7 @@ void User::validatePrivilege (Privilege privilege) {
   expect(privilege).toBeOneOf({ kCustomer, kWorker, kRoot });
 }
 
-User &UserManager::currentUser_ () {
+User &UserManager::currentUser () {
   return userStack_.back().first;
 }
 
@@ -66,15 +66,15 @@ UserManager::UserManager (const char *filename) : users_(filename) {
     users_.add(anon->id(), *anon);
     users_.add(kAdminId, User(kAdminId, kAdminName, kAdminPassword, kRoot));
   }
-  userStack_.push_back({ *anon, -1 });
+  userStack_.push_back({ *anon, "" });
 }
 
-void UserManager::logIn (const std::string &id, const std::string &password = "") {
+void UserManager::logIn (const std::string &id, const std::string &password) {
   if (id == kAnonymous) throw std::exception();
   auto user = userFromId_(id);
   if (!user) throw std::exception();
   if (password.size() > 0 && user->password() != password) throw std::exception();
-  userStack_.push_back({ *user, -1 });
+  userStack_.push_back({ *user, "" });
 }
 void UserManager::logOut () {
   userStack_.pop_back();
@@ -97,10 +97,10 @@ void UserManager::userAdd (const std::string &id, const std::string &password, P
   User user(id, name, password, privilege);
   users_.add(user.id(), user);
 }
-void UserManager::passwd (const std::string &id, const std::string &current, const std::string &newPassword = "") {
+void UserManager::passwd (const std::string &id, const std::string &current, const std::string &newPassword) {
   auto user = userFromId_(id);
   if (!user || id == kAnonymous) throw std::exception();
-  if (newPassword.size() == 0) {
+  if (newPassword.empty()) {
     User::validatePassword(current);
 
     // critical area begin
@@ -127,5 +127,15 @@ void UserManager::remove (const std::string &id) {
 }
 
 void UserManager::requestPrivilege (Privilege privilege) {
-  currentUser_().requestPrivilege_(privilege);
+  currentUser().requestPrivilege_(privilege);
+}
+void UserManager::clearCache () {
+  users_.clearCache();
+}
+
+std::string &UserManager::selection () {
+  return userStack_.back().second;
+}
+void UserManager::updateSeletions (const std::string &old, const std::string &current) {
+  for (auto &[ _, book ] : userStack_) if (book == old) book = current;
 }

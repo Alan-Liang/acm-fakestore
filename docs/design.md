@@ -91,15 +91,15 @@ class Book {
 class TradeRecord {
  private:
   // ak::file::Varchar<30> id_
-  double income, expense;
+  long long income_, expense_;
 
  public:
   // 构造函数，type = 0 为收入，= 1 为支出。
-  TradeRecord(const bool &type, const double &);
+  TradeRecord (const bool &type, long long);
   // 支持多笔交易记录相加。
-  TradeRecord &operator+=(const TradeRecord &);
+  TradeRecord &operator+= (const TradeRecord &);
   // 按照题目要求格式输出。
-  friend std::ostream &operator<<(std::ostream &, const TradeRecord &);
+  friend std::ostream &operator<< (std::ostream &, const TradeRecord &);
 };
 ```
 
@@ -110,12 +110,12 @@ class TradeRecord {
 ```c++
 class CmdRecord {
  private:
-  ak::file::Varchar<30> user_id;  // 执行者
-  ak::file::Varchar<1024> command;  // 原始命令
+  ak::file::Varchar<30> userId_;  // 执行者
+  ak::file::Varchar<1024> command_;  // 原始命令
 
  public:
-  CmdRecord(const std::string &, const std::string &);  // 构造函数。
-  friend std::ostream &operator<<(std::ostream &, const CmdRecord &);  // 输出重载。
+  CmdRecord (const std::string &, const std::string &);  // 构造函数。
+  friend std::ostream &operator<< (std::ostream &, const CmdRecord &);  // 输出重载。
 };
 ```
 
@@ -168,12 +168,7 @@ class BookManager {
   void show (Field field, const std::string &value);
   void show ();
   void buy (const std::string &isbn, const long long &cnt);
-  void select (const std::string &isbn);
-  struct UpdateClause {
-    Field field;
-    std::string payload;
-  };
-  void modify (const std::vector<UpdateClause> &updates);
+  Book select (const std::string &isbn);
   // 对于某本书的操作在 Book 类的成员函数内。
 };
 ```
@@ -199,7 +194,8 @@ class LogManager {
   // 在文件末尾加入一个交易记录，并修改交易记录数量。
   void addTrade (const TradeRecord &);
   // 对应题目命令，计算后 cnt 条交易记录并输出。
-  void showFinance (const int &cnt);
+  void showFinance (int cnt);
+  void showFinance ();
   // 输出所有交易记录。
   void reportFinance ();
   // 在文件末尾加入一个命令记录，并修改命令记录数量。

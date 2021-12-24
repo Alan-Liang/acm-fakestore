@@ -23,6 +23,12 @@ class BpTree {
   void query (const KeyType &key, std::vector<ValueType> &result) {
     result = store_.findMany(key);
   }
+  void queryAll (std::vector<std::pair<KeyType, ValueType>> &result) {
+    result = store_.findAll();
+  }
+  void clearCache () {
+    store_.clearCache();
+  }
 };
 
 #endif

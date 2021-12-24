@@ -9,6 +9,8 @@ code
 **/vgcore*
 **perf**
 data/
+*.bin
+*.dat
 
 CMakeLists.txt.user
 CMakeCache.txt
