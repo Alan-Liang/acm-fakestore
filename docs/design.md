@@ -185,32 +185,30 @@ class BookManager {
 ```c++
 class LogManager {
  private:
-  std::string trade_file_name;
-  std::string cmd_file_name;
-  // 也可以使用 B+ Tree 代为存储。
-  // int sizeof_trade, sizeof_cmd;
+  ak::file::File<sizeof(TradeRecord)> tradeFile_;
+  ak::file::File<sizeof(CmdRecord)> cmdFile_;
 
   // 私有成员函数，读取文件开头存的记录数量。
-  const int TradeCount();
-  const int CmdCount();
+  int tradeCount_ ();
+  int cmdCount_ ();
 
  public:
-  void Init(const std::string &name);
   // 初始化，文件名为 name + "_trade.bin"/"_cmd.bin".
   // 注意，每个文件开头预留一个 int 存储交易记录/命令记录的数量。
-  void AddTrade(const TradeRecord &);
+  LogManager (const std::string &name);
   // 在文件末尾加入一个交易记录，并修改交易记录数量。
-  void ShowFinance(const int &cnt);
+  void addTrade (const TradeRecord &);
   // 对应题目命令，计算后 cnt 条交易记录并输出。
-  void ReportFinance();
+  void showFinance (const int &cnt);
   // 输出所有交易记录。
-  void AddLog(const CmdRecord &);
+  void reportFinance ();
   // 在文件末尾加入一个命令记录，并修改命令记录数量。
-  void ReportEmployee(const std::string &id_ = "");
+  void addLog (const CmdRecord &);
   // 对应题目命令 report myself，从头到尾查找并输出某个员工的命令记录。
   // 对于命令 report employee，使用上述默认参数可以匹配所有 id 的记录。
-  void ReportLog();
+  void reportEmployee (const std::string &id_ = "");
   // 可以自由决定实现方式，或者可以分别调用 ReportFinance() 和 ReportEmployee().
+  void reportLog ();
 };
 ```
 
