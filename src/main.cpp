@@ -37,10 +37,10 @@ int main () {
   while (!std::cin.eof()) {
     std::string rawCommand;
     std::getline(std::cin, rawCommand);
-    if (rawCommand.size() > 1024) {
-      std::cout << "Invalid\n";
-      continue;
-    }
+    // if (rawCommand.size() > 1024) {
+    //   std::cout << "Invalid\n";
+    //   continue;
+    // }
     if (rawCommand.empty()) continue;
     std::vector<std::string> args;
     std::istringstream iss(rawCommand);
@@ -49,6 +49,7 @@ int main () {
       std::getline(iss, arg, ' ');
       if (!arg.empty()) args.push_back(arg);
     }
+    if (args.empty()) continue;
     auto nary = [&args] (int i) { if (args.size() != i + 1) throw std::exception(); };
     try {
       if (args[0] == "quit" || args[0] == "exit") {
@@ -103,11 +104,13 @@ int main () {
           userManager.requestPrivilege(kRoot);
           if (args.size() == 2) {
             logManager.showFinance();
-          } else {
+          } else if (args.size() == 3) {
             ak::validator::expect(args[2]).toBeConsistedOf("1234567890").butNot().toBeLongerThan(10);
             long long time = std::stoll(args[2]);
             ak::validator::expect(time).Not().toBeGreaterThan(2'147'483'647LL);
             logManager.showFinance(time);
+          } else {
+            throw std::exception();
           }
         } else {
           userManager.requestPrivilege(kCustomer);

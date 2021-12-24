@@ -83,6 +83,9 @@ void UserManager::signUp (const std::string &id, const std::string &password, co
   User::validateId(id);
   User::validatePassword(password);
   User::validateName(name);
+  std::vector<User> res;
+  users_.query(id, res);
+  if (!res.empty()) throw std::exception();
   User user(id, name, password, kCustomer);
   users_.add(user.id(), user);
 }

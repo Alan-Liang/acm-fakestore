@@ -46,6 +46,10 @@ void LogManager::addTrade (const TradeRecord &rec) {
   tradeFile_.set(&id, 0, sizeof(id));
 }
 void LogManager::showFinance (int cnt) {
+  if (cnt == 0) {
+    std::cout << '\n';
+    return;
+  }
   int count = tradeCount_();
   if (cnt > count) throw std::exception();
   TradeRecord rec(false, 0);
