@@ -3,7 +3,7 @@
 
 #include <ak/file/bptree.h>
 
-template <ak::file::BptStorable KeyType, ak::file::BptStorable ValueType, size_t szChunk = ak::file::kDefaultSzChunk>
+template <typename KeyType, typename ValueType, size_t szChunk = ak::file::kDefaultSzChunk>
 class BpTree {
  private:
   ak::file::BpTree<KeyType, ValueType, szChunk> store_;
