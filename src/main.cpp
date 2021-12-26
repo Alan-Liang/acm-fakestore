@@ -91,12 +91,12 @@ int main () {
         if (args[3] == "1") {
           p = kCustomer;
           userManager.requestPrivilege(kWorker);
-        }
-        else if (args[3] == "3") {
+        } else if (args[3] == "3") {
           p = kWorker;
           userManager.requestPrivilege(kRoot);
+        } else {
+          throw std::exception();
         }
-        else throw std::exception();
         userManager.userAdd(args[1], args[2], p, args[4]);
       } else if (args[0] == "delete") {
         nary(1);

@@ -114,6 +114,7 @@ void UserManager::passwd (const std::string &id, const std::string &current, con
 
     return;
   }
+  User::validatePassword(newPassword);
   if (user->password() != current) throw std::exception();
 
   // critical area begin
