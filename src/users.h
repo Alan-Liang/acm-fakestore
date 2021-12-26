@@ -19,7 +19,7 @@ class User {
   friend class UserManager;
  public:
   User () = default;
-  User (const std::string id, const std::string &name, const std::string password, Privilege privilege);
+  User (const std::string &id, const std::string &name, const std::string &password, Privilege privilege);
 
   std::string id ();
   std::string name ();

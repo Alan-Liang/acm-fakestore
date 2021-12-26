@@ -5,9 +5,9 @@
 #include <vector>
 
 User::User (
-  const std::string id,
+  const std::string &id,
   const std::string &name,
-  const std::string password,
+  const std::string &password,
   Privilege privilege
 ) :
   id_(id),
@@ -66,15 +66,15 @@ UserManager::UserManager (const char *filename) : users_(filename) {
     users_.add(anon->id(), *anon);
     users_.add(kAdminId, User(kAdminId, kAdminName, kAdminPassword, kRoot));
   }
-  userStack_.push_back({ *anon, "" });
+  userStack_.emplace_back(*anon, "");
 }
 
 void UserManager::logIn (const std::string &id, const std::string &password) {
   if (id == kAnonymous) throw std::exception();
   auto user = userFromId_(id);
   if (!user) throw std::exception();
-  if (password.size() > 0 && user->password() != password) throw std::exception();
-  userStack_.push_back({ *user, "" });
+  if (!password.empty() && user->password() != password) throw std::exception();
+  userStack_.emplace_back(*user, "");
 }
 void UserManager::logOut () {
   userStack_.pop_back();

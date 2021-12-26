@@ -1,0 +1,3 @@
+---
+Checks: 'clang-diagnostic-*,clang-analyzer-*,bugprone-*,modernize-*,-modernize-deprecated-headers,-modernize-use-trailing-return-type,-modernize-avoid-c-arrays,performance-*,readability-*,-readability-braces-around-statements,-readability-identifier-length,-readability-isolate-declaration,-readability-magic-numbers,-bugprone-easily-swappable-parameters,-clang-diagnostic-invalid-offsetof'
+...

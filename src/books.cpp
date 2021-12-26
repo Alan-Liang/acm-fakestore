@@ -63,7 +63,7 @@ void Book::print () const {
     << quantity << '\n';
 }
 
-std::vector<std::string> Book::keywords() {
+std::vector<std::string> Book::keywords() const {
   std::vector<std::string> keywords;
   std::istringstream iss(keyword);
   while (!iss.eof()) {

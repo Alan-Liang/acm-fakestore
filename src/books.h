@@ -28,7 +28,7 @@ class Book {
   bool operator< (const Book &rhs) const;
   // 修改与进货等直接访问成员变量。
 
-  std::vector<std::string> keywords ();
+  std::vector<std::string> keywords () const;
   void print () const;
 };
 

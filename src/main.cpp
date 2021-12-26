@@ -12,21 +12,24 @@ BookManager::FieldClause parseClause (const std::string &arg) {
   if (arg[1] == 'I') {
     ak::validator::expect(arg).toMatch(R"(-ISBN=.+)");
     return { .field = BookManager::Field::kIsbn, .payload = arg.substr(6) };
-  } else if (arg[1] == 'n') {
+  }
+  if (arg[1] == 'n') {
     ak::validator::expect(arg).toMatch(R"(-name=".+")");
     return { .field = BookManager::Field::kName, .payload = arg.substr(7, arg.length() - 8) };
-  } else if (arg[1] == 'a') {
+  }
+  if (arg[1] == 'a') {
     ak::validator::expect(arg).toMatch(R"(-author=".+")");
     return { .field = BookManager::Field::kAuthor, .payload = arg.substr(9, arg.length() - 10) };
-  } else if (arg[1] == 'k') {
+  }
+  if (arg[1] == 'k') {
     ak::validator::expect(arg).toMatch(R"(-keyword=".+")");
     return { .field = BookManager::Field::kKeyword, .payload = arg.substr(10, arg.length() - 11) };
-  } else if (arg[1] == 'p') {
+  }
+  if (arg[1] == 'p') {
     ak::validator::expect(arg).toMatch(R"(-price=.+)");
     return { .field = BookManager::Field::kPrice, .payload = arg.substr(7) };
-  } else {
-    throw std::exception();
   }
+  throw std::exception();
 };
 
 int main () {
@@ -37,10 +40,10 @@ int main () {
   while (!std::cin.eof()) {
     std::string rawCommand;
     std::getline(std::cin, rawCommand);
-    // if (rawCommand.size() > 1024) {
-    //   std::cout << "Invalid\n";
-    //   continue;
-    // }
+    if (rawCommand.size() > 1024) {
+      std::cout << "Invalid\n";
+      continue;
+    }
     if (rawCommand.empty()) continue;
     std::vector<std::string> args;
     std::istringstream iss(rawCommand);
