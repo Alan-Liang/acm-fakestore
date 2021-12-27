@@ -12,12 +12,14 @@ class TradeRecord {
   long long income_ = 0, expense_ = 0;
 
  public:
+  TradeRecord () = default;
   // 构造函数，type = 0 为收入，= 1 为支出。
   TradeRecord (const bool &type, long long amount);
   // 支持多笔交易记录相加。
   TradeRecord &operator+= (const TradeRecord &);
   // 按照题目要求格式输出。
   friend std::ostream &operator<< (std::ostream &, const TradeRecord &);
+  void prettyPrint ();
 };
 
 class CmdRecord {
@@ -26,8 +28,10 @@ class CmdRecord {
   ak::file::Varchar<1024> command_;  // 原始命令
 
  public:
+  CmdRecord () = default;
   CmdRecord (const std::string &, const std::string &);  // 构造函数。
   friend std::ostream &operator<< (std::ostream &, const CmdRecord &);  // 输出重载。
+  void printIfIsUser (const std::string &userId);
 };
 
 class LogManager {

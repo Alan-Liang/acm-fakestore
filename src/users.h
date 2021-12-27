@@ -4,6 +4,7 @@
 #include <ak/file/varchar.h>
 #include <string>
 #include <optional>
+#include <vector>
 
 #include "bptree.h"
 #include "books.h"
@@ -63,6 +64,8 @@ class UserManager {
 
   std::string &selection ();
   void updateSeletions (const std::string &old, const std::string &current);
+
+  std::vector<User> allUsers ();
 };
 
 #endif

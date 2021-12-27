@@ -1,5 +1,7 @@
 #include "logs.h"
 
+#include <ak/chalk.h>
+#include <sstream>
 #include <iostream>
 
 #include "books.h"
@@ -16,11 +18,24 @@ std::ostream &operator<< (std::ostream &os, const TradeRecord &rec) {
   os << "+ " << Book::formatDecimal(rec.income_) << " - " << Book::formatDecimal(rec.expense_) << "\n";
   return os;
 }
+void TradeRecord::prettyPrint () {
+  std::string tag = isExpense_ ? ak::chalk::red("expense") : ak::chalk::green("income");
+  std::string amount = Book::formatDecimal(isExpense_ ? expense_ : income_);
+  std::cout << tag << " " << amount << std::endl;
+}
 
 CmdRecord::CmdRecord (const std::string &userId, const std::string &command) : userId_(userId), command_(command) {}
 std::ostream &operator<< (std::ostream &os, const CmdRecord &rec) {
-  os << "[" << rec.userId_.str() << "] " << rec.command_.str() << '\n';
+  std::istringstream iss(rec.command_);
+  std::string argv0, args;
+  std::getline(iss, argv0, ' ');
+  std::getline(iss, args, '\n');
+  os << "[" << ak::chalk::magenta(rec.userId_.str()) << "] " << ak::chalk::bold(ak::chalk::blue(argv0)) << " " << args << '\n';
   return os;
+}
+
+void CmdRecord::printIfIsUser (const std::string &userId) {
+  if (userId == userId_.str()) std::cout << *this;
 }
 
 int LogManager::tradeCount_ () {
@@ -64,8 +79,15 @@ void LogManager::showFinance () {
   showFinance(tradeCount_());
 }
 void LogManager::reportFinance () {
-  // TODO
-  std::cout << "Method not implemented\n";
+  int sz = tradeCount_();
+  for (int i = 1; i <= sz; ++i) {
+    TradeRecord rec;
+    tradeFile_.get(&rec, i, sizeof(rec));
+    std::cout << i << ". ";
+    rec.prettyPrint();
+  }
+  std::cout << ak::chalk::magenta(ak::chalk::bold("Total")) << ": ";
+  showFinance();
 }
 void LogManager::addLog (const CmdRecord &rec) {
   cmdFile_.push(&rec, sizeof(rec));
@@ -73,12 +95,26 @@ void LogManager::addLog (const CmdRecord &rec) {
   cmdFile_.set(&id, 0, sizeof(id));
 }
 void LogManager::reportEmployee (const std::string &id_) {
-  // TODO
-  std::cout << "Method not implemented\n";
+  std::cout << "Actions performed by " << ak::chalk::magenta(ak::chalk::bold(id_)) << ":" << std::endl;
+  int sz = cmdCount_();
+  for (int i = 1; i <= sz; ++i) {
+    CmdRecord rec;
+    cmdFile_.get(&rec, i, sizeof(rec));
+    rec.printIfIsUser(id_);
+  }
 }
 void LogManager::reportLog () {
-  // TODO
-  std::cout << "Method not implemented\n";
+  const char dashes[] = "--------------------";
+  std::cout << dashes << ak::chalk::red(ak::chalk::bold(" Finance Report ")) << dashes << std::endl;
+  reportFinance();
+  std::cout << std::endl;
+  std::cout << dashes << ak::chalk::red(ak::chalk::bold(" System Logs ")) << dashes << std::endl;
+  int sz = cmdCount_();
+  for (int i = 1; i <= sz; ++i) {
+    CmdRecord rec;
+    cmdFile_.get(&rec, i, sizeof(rec));
+    std::cout << rec;
+  }
 }
 
 void LogManager::clearCache () {

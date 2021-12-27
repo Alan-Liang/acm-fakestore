@@ -143,3 +143,11 @@ std::string &UserManager::selection () {
 void UserManager::updateSeletions (const std::string &old, const std::string &current) {
   for (auto &[ _, book ] : userStack_) if (book == old) book = current;
 }
+
+std::vector<User> UserManager::allUsers () {
+  std::vector<std::pair<decltype(User::id_), User>> result;
+  users_.queryAll(result);
+  std::vector<User> users;
+  for (const auto &[ _, user ] : result) users.push_back(user);
+  return users;
+}

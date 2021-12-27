@@ -53,6 +53,7 @@ int main () {
       if (!arg.empty()) args.push_back(arg);
     }
     if (args.empty()) continue;
+    logManager.addLog(CmdRecord(userManager.currentUser().id(), rawCommand));
     auto nary = [&args] (int i) { if (args.size() != i + 1) throw std::exception(); };
     try {
       if (args[0] == "quit" || args[0] == "exit") {
@@ -164,15 +165,29 @@ int main () {
         bookManager.import(isbn, qty);
         logManager.addTrade(TradeRecord(true, totalCost));
       } else if (args[0] == "report") {
-        // TODO
-        throw std::exception();
+        nary(1);
+        ak::validator::expect(args[1]).toBeOneOf({ "myself", "finance", "employee" });
+        userManager.requestPrivilege(args[1] == "myself" ? kWorker : kRoot);
+        if (args[1] == "myself") {
+          logManager.reportEmployee(userManager.currentUser().id());
+        } else if (args[1] == "finance") {
+          logManager.reportFinance();
+        } else if (args[1] == "employee") {
+          std::vector<User> users = userManager.allUsers();
+          for (User &user : users) {
+            if (user.privilege() >= kWorker) {
+              logManager.reportEmployee(user.id());
+              std::cout << std::endl;
+            }
+          }
+        }
       } else if (args[0] == "log") {
-        // TODO
-        throw std::exception();
+        nary(0);
+        userManager.requestPrivilege(kRoot);
+        logManager.reportLog();
       } else {
         throw std::exception();
       }
-      logManager.addLog(CmdRecord(userManager.currentUser().id(), rawCommand));
     } catch (...) {
       std::cout << "Invalid\n";
     }
