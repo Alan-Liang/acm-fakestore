@@ -3,6 +3,18 @@ ACM Fakestore
 
 CS1953 Lab at ACM class of SJTU.
 
+## Status
+
+1412\. 文件存储结构测试（for bookstore）: [accepted](https://acm.sjtu.edu.cn/OnlineJudge/code?submit_id=100542) ([hack ver. via `mmap()`](https://acm.sjtu.edu.cn/OnlineJudge/code?submit_id=100118))    
+1075\. Bookstore: [accepted](https://acm.sjtu.edu.cn/OnlineJudge/code?submit_id=105513) ([JavaScript ver.](https://acm.sjtu.edu.cn/OnlineJudge/code?submit_id=99050))    
+1411\. Bookstore (InnerTestCase): [accepted](https://acm.sjtu.edu.cn/OnlineJudge/code?submit_id=105512) ([JavaScript ver.](https://acm.sjtu.edu.cn/OnlineJudge/code?submit_id=103648))    
+
+Bonuses:
+
+- Task 1. prettified `report` (1 pt)
+- Task 18. B+ tree (10 pts)
+   - Implemented in [libakcpp](https://github.com/AnotherKit/libakcpp/blob/master/include/ak/file/bptree.h)
+
 ## Quick links
 
 Instructions: <https://github.com/ACM-Programming-2021/Bookstore-2021/>
